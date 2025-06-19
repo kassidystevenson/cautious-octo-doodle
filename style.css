@@ -28,4 +28,11 @@ canvas {
   background-color: #ffffff;
   display: block;
   margin: 0 auto;
+  /* Add a subtle shadow for better visuals */
+  box-shadow: 0 4px 24px 0 rgba(135, 206, 250, 0.15);
+  image-rendering: optimizeQuality;
+}
+/* Optional: Enhance splash and teardrop visuals with smoother rendering */
+canvas {
+  image-rendering: optimizeQuality;
 }
