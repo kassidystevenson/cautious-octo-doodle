@@ -33,6 +33,14 @@
     <div id="message"></div>
     <div class="milestone" id="milestone"></div>
     <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div id="game-over-modal" style="display:none; position: absolute; left:0; top:0; width:100%; height:100%; background:rgba(255,255,255,0.97); z-index:10; align-items:center; justify-content:center; flex-direction:column; text-align:center;">
+      <div style="margin-top: 120px;">
+        <h2 style="color:#00bcd4; font-size:2em; margin-bottom:12px;">Game Over!</h2>
+        <div id="final-score" style="font-size:1.5em; color:#ffb300; margin-bottom:18px;"></div>
+        <button id="restart-btn" class="game-btn">Restart</button>
+        <button id="reset-btn" class="game-btn" style="margin-left:12px;">Reset</button>
+      </div>
+    </div>
   </div>
   <script>
     const canvas = document.getElementById('gameCanvas');
@@ -40,6 +48,10 @@
     const scoreEl = document.getElementById('score');
     const messageEl = document.getElementById('message');
     const milestoneEl = document.getElementById('milestone');
+    const gameOverModal = document.getElementById('game-over-modal');
+    const finalScoreEl = document.getElementById('final-score');
+    const restartBtn = document.getElementById('restart-btn');
+    const resetBtn = document.getElementById('reset-btn');
 
     // Game settings
     const MOLE_SIZE = 60;
@@ -62,6 +74,7 @@
     let timeLeft = 45;
     const timerValueEl = document.getElementById('timer-value');
     const timerEl = document.getElementById('timer');
+    let timerInterval = null;
 
     // Predefined holes (positions)
     const holes = [
@@ -342,13 +355,56 @@
       if (gameActive) requestAnimationFrame(gameLoop);
     }
 
+    function showGameOver() {
+      finalScoreEl.textContent = `Final Score: ${score}`;
+      gameOverModal.style.display = "flex";
+    }
+
+    function hideGameOver() {
+      gameOverModal.style.display = "none";
+    }
+
+    function resetGameVars() {
+      score = 0;
+      moles = [];
+      obstacles = [];
+      pops = [];
+      lastMilestone = 0;
+      timeLeft = 45;
+      gameActive = true;
+      scoreEl.textContent = 'Score: 0';
+      messageEl.textContent = '';
+      milestoneEl.textContent = '';
+      updateTimerDisplay();
+    }
+
+    function restartGame() {
+      hideGameOver();
+      resetGameVars();
+      gameLoop();
+      startTimer();
+    }
+
+    function resetAll() {
+      hideGameOver();
+      resetGameVars();
+      // Optionally, you could reload the page for a full reset:
+      // location.reload();
+      gameLoop();
+      startTimer();
+    }
+
+    restartBtn.onclick = restartGame;
+    resetBtn.onclick = resetAll;
+
     function updateTimerDisplay() {
       timerValueEl.textContent = timeLeft;
     }
 
     function startTimer() {
       updateTimerDisplay();
-      const timerInterval = setInterval(() => {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
         if (!gameActive) {
           clearInterval(timerInterval);
           return;
@@ -359,7 +415,7 @@
           gameActive = false;
           timerValueEl.textContent = "0";
           messageEl.textContent = "⏰ Time's up!";
-          // Optionally: disable further clicks or show restart
+          showGameOver();
           clearInterval(timerInterval);
         }
       }, 1000);
