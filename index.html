@@ -36,7 +36,7 @@
     const OBSTACLE_SIZE = 55;
     const MOLE_COLOR = "#fbc02d"; // charity: water yellow
     const OBSTACLE_COLOR = "#bdbdbd"; // gray for fake cans
-    const MOLE_APPEAR_TIME = 900; // ms
+    const MOLE_APPEAR_TIME = 1300; // ms (increased from 900 for longer visibility)
     const OBSTACLE_APPEAR_TIME = 900; // ms
     const MOLE_POPUP_INTERVAL = 650; // ms
     const NUM_HOLES = 6;
@@ -44,6 +44,7 @@
     let score = 0;
     let moles = [];
     let obstacles = [];
+    let pops = []; // Store pop "X" effects
     let lastMilestone = 0;
     let gameActive = true;
 
@@ -99,27 +100,80 @@
       ctx.restore();
     }
 
-    function drawObstacle(x, y, size) {
-      // Fake can: gray, no cross, different handle
+    function drawHedgehog(x, y, size) {
       ctx.save();
+      // Body (ellipse)
       ctx.beginPath();
-      ctx.moveTo(x - size/2 + 8, y - size/2 + 10);
-      ctx.lineTo(x + size/2 - 8, y - size/2 + 10);
-      ctx.lineTo(x + size/2 - 8, y + size/2 - 10);
-      ctx.lineTo(x - size/2 + 8, y + size/2 - 10);
-      ctx.closePath();
-      ctx.fillStyle = OBSTACLE_COLOR;
-      ctx.shadowColor = "#bdbdbd88";
+      ctx.ellipse(x, y + size * 0.1, size * 0.38, size * 0.28, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#a0522d";
+      ctx.shadowColor = "#a0522d88";
       ctx.shadowBlur = 8;
       ctx.fill();
 
-      // Handle (different shape)
+      // Face (circle)
       ctx.beginPath();
-      ctx.arc(x - size/2 + 24, y - size/2 + 10, 8, 0, Math.PI, true);
-      ctx.strokeStyle = "#eeeeee";
-      ctx.lineWidth = 3;
-      ctx.stroke();
+      ctx.arc(x, y, size * 0.18, 0, Math.PI * 2);
+      ctx.fillStyle = "#f5deb3";
+      ctx.shadowBlur = 0;
+      ctx.fill();
 
+      // Nose
+      ctx.beginPath();
+      ctx.arc(x, y - size * 0.18, size * 0.04, 0, Math.PI * 2);
+      ctx.fillStyle = "#333";
+      ctx.fill();
+
+      // Eyes
+      ctx.beginPath();
+      ctx.arc(x - size * 0.06, y - size * 0.04, size * 0.025, 0, Math.PI * 2);
+      ctx.arc(x + size * 0.06, y - size * 0.04, size * 0.025, 0, Math.PI * 2);
+      ctx.fillStyle = "#222";
+      ctx.fill();
+
+      // Ears
+      ctx.beginPath();
+      ctx.arc(x - size * 0.11, y - size * 0.10, size * 0.035, 0, Math.PI * 2);
+      ctx.arc(x + size * 0.11, y - size * 0.10, size * 0.035, 0, Math.PI * 2);
+      ctx.fillStyle = "#f5deb3";
+      ctx.fill();
+
+      // Spikes (simple lines)
+      for (let i = 0; i < 10; i++) {
+        let angle = Math.PI * (0.2 + 0.6 * (i / 9));
+        let r1 = size * 0.32, r2 = size * 0.45;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(angle) * r1, y + Math.sin(angle) * r1 + size * 0.1);
+        ctx.lineTo(x + Math.cos(angle) * r2, y + Math.sin(angle) * r2 + size * 0.1);
+        ctx.strokeStyle = "#6d3b1a";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawObstacle(x, y, size) {
+      // Fake hedgehog: gray, no face
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(x, y + size * 0.1, size * 0.38, size * 0.28, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#bdbdbd";
+      ctx.shadowColor = "#bdbdbd88";
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawPopX(x, y, size, progress) {
+      ctx.save();
+      ctx.globalAlpha = 1 - progress;
+      ctx.strokeStyle = "#e53935";
+      ctx.lineWidth = 8 + 8 * (1 - progress);
+      ctx.beginPath();
+      ctx.moveTo(x - size * 0.35, y - size * 0.35);
+      ctx.lineTo(x + size * 0.35, y + size * 0.35);
+      ctx.moveTo(x + size * 0.35, y - size * 0.35);
+      ctx.lineTo(x - size * 0.35, y + size * 0.35);
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -138,13 +192,17 @@
     function drawGame() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawHoles();
-      // Draw moles (jerry cans)
+      // Draw moles (hedgehogs)
       for (let m of moles) {
-        drawJerryCan(m.x, m.y, MOLE_SIZE, MOLE_COLOR);
+        drawHedgehog(m.x, m.y, MOLE_SIZE);
       }
       // Draw obstacles
       for (let o of obstacles) {
         drawObstacle(o.x, o.y, OBSTACLE_SIZE);
+      }
+      // Draw pop X effects
+      for (let p of pops) {
+        drawPopX(p.x, p.y, MOLE_SIZE, p.progress);
       }
     }
 
@@ -177,14 +235,12 @@
       };
       moles.push(mole);
       mole.timeout = setTimeout(() => {
-        // Remove mole if not whacked
         moles = moles.filter(m => m !== mole);
       }, MOLE_APPEAR_TIME);
     }
 
     function spawnObstacle() {
       if (!gameActive) return;
-      // 30% chance to spawn an obstacle
       if (Math.random() > 0.3) return;
       let available = holes.filter(h => !moles.some(m => m.holeIdx === holes.indexOf(h)) && !obstacles.some(o => o.holeIdx === holes.indexOf(h)));
       if (available.length === 0) return;
@@ -204,10 +260,10 @@
 
     function checkMilestone() {
       const milestones = [
-        { score: 5, msg: "Milestone: 5 cans! Great start!" },
-        { score: 10, msg: "Milestone: 10 cans! Keep going!" },
-        { score: 20, msg: "Milestone: 20 cans! Amazing!" },
-        { score: 30, msg: "Milestone: 30 cans! You're a hero!" }
+        { score: 5, msg: "Milestone: 5 hedgehogs! Great start!" },
+        { score: 10, msg: "Milestone: 10 hedgehogs! Keep going!" },
+        { score: 20, msg: "Milestone: 20 hedgehogs! Amazing!" },
+        { score: 30, msg: "Milestone: 30 hedgehogs! You're a hero!" }
       ];
       for (let m of milestones) {
         if (score >= m.score && lastMilestone < m.score) {
@@ -222,7 +278,7 @@
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      // Check moles first
+      // Check moles (hedgehogs) first
       for (let i = moles.length - 1; i >= 0; i--) {
         const m = moles[i];
         const dx = m.x - mouseX;
@@ -230,6 +286,8 @@
         if (Math.abs(dx) < MOLE_SIZE/2 && Math.abs(dy) < MOLE_SIZE/2) {
           // Whacked!
           clearTimeout(m.timeout);
+          // Add pop X effect
+          pops.push({ x: m.x, y: m.y, progress: 0 });
           moles.splice(i, 1);
           score += 1;
           scoreEl.textContent = 'Score: ' + score;
@@ -244,18 +302,27 @@
         const dx = o.x - mouseX;
         const dy = o.y - mouseY;
         if (Math.abs(dx) < OBSTACLE_SIZE/2 && Math.abs(dy) < OBSTACLE_SIZE/2) {
-          // Hit obstacle: penalty
           clearTimeout(o.timeout);
           obstacles.splice(i, 1);
           score = Math.max(0, score - 1);
           scoreEl.textContent = 'Score: ' + score;
-          showMessage('Oops! Fake can!');
+          showMessage('Oops! Fake hedgehog!');
           return;
         }
       }
     });
 
+    function updatePops() {
+      for (let i = pops.length - 1; i >= 0; i--) {
+        pops[i].progress += 0.08;
+        if (pops[i].progress >= 1) {
+          pops.splice(i, 1);
+        }
+      }
+    }
+
     function gameLoop() {
+      updatePops();
       drawGame();
       if (gameActive) requestAnimationFrame(gameLoop);
     }

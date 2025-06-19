@@ -1,38 +1,132 @@
 body {
-  font-family: Arial, sans-serif;
-  background: #e0f7fa;
+  font-family: 'Quicksand', 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
   text-align: center;
   margin: 0;
   padding: 0;
 }
 
 #game-container {
-  padding: 20px;
+  padding: 32px 20px 20px 20px;
+  background: rgba(255,255,255,0.85);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px 0 rgba(0, 150, 136, 0.15);
+  max-width: 480px;
+  margin: 32px auto 0 auto;
+  transition: box-shadow 0.3s;
+}
+
+h1 {
+  font-family: 'Luckiest Guy', 'Quicksand', cursive, sans-serif;
+  font-size: 2.4em;
+  color: #00bcd4;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 8px #4dd0e1, 0 1px 0 #fff;
+  margin-bottom: 18px;
+  animation: popIn 1s cubic-bezier(.68,-0.55,.27,1.55);
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.7); opacity: 0; }
+  80% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
 }
 
 #score {
-  font-size: 24px;
-  margin: 10px;
-  color: #006064;
+  font-size: 28px;
+  margin: 14px 0 8px 0;
+  color: #ffb300;
+  font-weight: bold;
+  background: linear-gradient(90deg, #fffde7 60%, #ffe082 100%);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px 0 #ffe08255;
+  display: inline-block;
+  padding: 8px 28px;
+  letter-spacing: 1px;
+  transition: background 0.3s, color 0.3s;
 }
 
 #message {
-  font-size: 18px;
-  margin-bottom: 10px;
-  height: 24px;
-  color: #004d40;
+  font-size: 20px;
+  margin-bottom: 12px;
+  height: 28px;
+  color: #009688;
+  font-weight: 600;
+  text-shadow: 0 1px 0 #fff;
+  transition: color 0.3s;
+}
+
+.milestone {
+  color: #ffd600;
+  font-weight: bold;
+  margin-top: 10px;
+  font-size: 22px;
+  min-height: 28px;
+  text-shadow: 0 2px 8px #fffde7, 0 1px 0 #fff;
+  letter-spacing: 1px;
+  animation: popIn 0.7s;
 }
 
 canvas {
-  border: 2px solid #00796b;
-  background-color: #ffffff;
+  border: 3px solid #00bcd4;
+  background: linear-gradient(180deg, #e0f7fa 60%, #b2ebf2 100%);
   display: block;
   margin: 0 auto;
-  /* Add a subtle shadow for better visuals */
-  box-shadow: 0 4px 24px 0 rgba(135, 206, 250, 0.15);
+  box-shadow: 0 6px 32px 0 rgba(0, 188, 212, 0.18);
+  border-radius: 18px;
   image-rendering: optimizeQuality;
+  transition: box-shadow 0.3s;
 }
-/* Optional: Enhance splash and teardrop visuals with smoother rendering */
-canvas {
-  image-rendering: optimizeQuality;
+
+/* Example button style for future use */
+button, .game-btn {
+  font-family: 'Quicksand', 'Segoe UI', Arial, sans-serif;
+  font-size: 1.1em;
+  background: linear-gradient(90deg, #00bcd4 60%, #ffd600 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px 0 #00bcd455;
+  padding: 10px 32px;
+  margin: 12px 8px;
+  cursor: pointer;
+  font-weight: bold;
+  letter-spacing: 1px;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+}
+button:hover, .game-btn:hover {
+  background: linear-gradient(90deg, #ffd600 60%, #00bcd4 100%);
+  color: #fffde7;
+  transform: scale(1.06);
+}
+
+/* Example progress bar style for future use */
+.progress-bar-bg {
+  width: 80%;
+  height: 18px;
+  background: #b2ebf2;
+  border-radius: 9px;
+  margin: 18px auto;
+  box-shadow: 0 2px 8px #00bcd433;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd600 60%, #00bcd4 100%);
+  border-radius: 9px 0 0 9px;
+  transition: width 0.3s;
+}
+
+/* Example icon style for future use */
+.icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 36px;
+  height: 36px;
+  margin: 0 6px;
+  filter: drop-shadow(0 2px 6px #00bcd455);
+  transition: transform 0.2s;
+}
+.icon-pop {
+  animation: popIn 0.5s;
 }
