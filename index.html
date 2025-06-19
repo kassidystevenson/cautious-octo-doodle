@@ -19,7 +19,17 @@
 <body>
   <div id="game-container">
     <h1>Whack-a-Jerry Can!</h1>
-    <div id="score">Score: 0</div>
+    <div style="display: flex; justify-content: center; align-items: center; gap: 18px; margin-bottom: 8px;">
+      <div id="score">Score: 0</div>
+      <div id="timer" style="display: flex; align-items: center; font-size: 26px; color: #ffd600; font-weight: bold; text-shadow: 0 1px 6px #fffde7, 0 1px 0 #fff;">
+        <svg width="28" height="28" viewBox="0 0 32 32" style="margin-right: 5px;">
+          <circle cx="16" cy="16" r="13" stroke="#ffd600" stroke-width="3" fill="none"/>
+          <rect x="15" y="7" width="2" height="10" rx="1" fill="#ffd600"/>
+          <circle cx="16" cy="16" r="2.5" fill="#ffd600"/>
+        </svg>
+        <span id="timer-value">45</span>s
+      </div>
+    </div>
     <div id="message"></div>
     <div class="milestone" id="milestone"></div>
     <canvas id="gameCanvas" width="400" height="600"></canvas>
@@ -47,6 +57,11 @@
     let pops = []; // Store pop "X" effects
     let lastMilestone = 0;
     let gameActive = true;
+
+    // Timer variables
+    let timeLeft = 45;
+    const timerValueEl = document.getElementById('timer-value');
+    const timerEl = document.getElementById('timer');
 
     // Predefined holes (positions)
     const holes = [
@@ -327,12 +342,36 @@
       if (gameActive) requestAnimationFrame(gameLoop);
     }
 
+    function updateTimerDisplay() {
+      timerValueEl.textContent = timeLeft;
+    }
+
+    function startTimer() {
+      updateTimerDisplay();
+      const timerInterval = setInterval(() => {
+        if (!gameActive) {
+          clearInterval(timerInterval);
+          return;
+        }
+        timeLeft--;
+        updateTimerDisplay();
+        if (timeLeft <= 0) {
+          gameActive = false;
+          timerValueEl.textContent = "0";
+          messageEl.textContent = "⏰ Time's up!";
+          // Optionally: disable further clicks or show restart
+          clearInterval(timerInterval);
+        }
+      }, 1000);
+    }
+
     // Fast-paced spawn
     setInterval(spawnMole, MOLE_POPUP_INTERVAL);
     setInterval(spawnObstacle, MOLE_POPUP_INTERVAL);
 
     // Start game
     gameLoop();
+    startTimer();
   </script>
 </body>
 </html>
