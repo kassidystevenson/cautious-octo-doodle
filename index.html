@@ -3,145 +3,268 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Water Drop Catch Game</title>
+  <title>Whack-a-Jerry Can!</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Quick yellow jerry can style for canvas */
+    .milestone {
+      color: #fbc02d;
+      font-weight: bold;
+      margin-top: 10px;
+      font-size: 20px;
+      min-height: 28px;
+    }
+  </style>
 </head>
 <body>
   <div id="game-container">
-    <h1>Catch the Water Drops!</h1>
+    <h1>Whack-a-Jerry Can!</h1>
     <div id="score">Score: 0</div>
     <div id="message"></div>
+    <div class="milestone" id="milestone"></div>
     <canvas id="gameCanvas" width="400" height="600"></canvas>
   </div>
-
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('score');
     const messageEl = document.getElementById('message');
-    
-    let drops = [];
+    const milestoneEl = document.getElementById('milestone');
+
+    // Game settings
+    const MOLE_SIZE = 60;
+    const OBSTACLE_SIZE = 55;
+    const MOLE_COLOR = "#fbc02d"; // charity: water yellow
+    const OBSTACLE_COLOR = "#bdbdbd"; // gray for fake cans
+    const MOLE_APPEAR_TIME = 900; // ms
+    const OBSTACLE_APPEAR_TIME = 900; // ms
+    const MOLE_POPUP_INTERVAL = 650; // ms
+    const NUM_HOLES = 6;
+
     let score = 0;
+    let moles = [];
+    let obstacles = [];
+    let lastMilestone = 0;
+    let gameActive = true;
 
-    function spawnDrop() {
-      const isBad = Math.random() < 0.2; // 20% chance of bad drop
-      drops.push({
-        x: Math.random() * canvas.width,
-        y: 0,
-        radius: 15,
-        speed: 2 + Math.random() * 3,
-        isBad: isBad,
-        popping: false,
-        popProgress: 0,
-        splash: false, // true if splash animation is active
-        splashProgress: 0 // 0 to 1 for splash animation
-      });
-    }
+    // Predefined holes (positions)
+    const holes = [
+      { x: 80, y: 140 },
+      { x: 320, y: 140 },
+      { x: 80, y: 300 },
+      { x: 320, y: 300 },
+      { x: 80, y: 460 },
+      { x: 320, y: 460 }
+    ];
 
-    function drawTeardrop(ctx, x, y, radius, color) {
+    function drawJerryCan(x, y, size, color) {
       ctx.save();
+      // Body
       ctx.beginPath();
-      ctx.moveTo(x, y - radius);
-      ctx.bezierCurveTo(
-        x + radius, y - radius,
-        x + radius, y + radius * 0.8,
-        x, y + radius * 1.5
-      );
-      ctx.bezierCurveTo(
-        x - radius, y + radius * 0.8,
-        x - radius, y - radius,
-        x, y - radius
-      );
+      ctx.moveTo(x - size/2 + 8, y - size/2 + 10);
+      ctx.lineTo(x + size/2 - 8, y - size/2 + 10);
+      ctx.lineTo(x + size/2 - 8, y + size/2 - 10);
+      ctx.lineTo(x - size/2 + 8, y + size/2 - 10);
       ctx.closePath();
       ctx.fillStyle = color;
-      ctx.shadowColor = "#b3e0ff";
+      ctx.shadowColor = "#fbc02d88";
       ctx.shadowBlur = 8;
       ctx.fill();
+
+      // Handle
+      ctx.beginPath();
+      ctx.moveTo(x - size/2 + 12, y - size/2 + 10);
+      ctx.lineTo(x - size/2 + 24, y - size/2 - 8);
+      ctx.lineTo(x - size/2 + 36, y - size/2 + 10);
+      ctx.closePath();
+      ctx.fillStyle = "#fffde7";
+      ctx.fill();
+
+      // Cap
+      ctx.beginPath();
+      ctx.arc(x - size/2 + 24, y - size/2 - 8, 5, 0, Math.PI * 2);
+      ctx.fillStyle = "#fbc02d";
+      ctx.fill();
+
+      // Cross
+      ctx.strokeStyle = "#fffde7";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(x - size/2 + 16, y - size/2 + 20);
+      ctx.lineTo(x + size/2 - 16, y + size/2 - 20);
+      ctx.moveTo(x + size/2 - 16, y - size/2 + 20);
+      ctx.lineTo(x - size/2 + 16, y + size/2 - 20);
+      ctx.stroke();
+
       ctx.restore();
     }
 
-    function drawSplash(ctx, x, y, progress) {
-      // Draw a simple splash: several arcs/ellipses radiating out
+    function drawObstacle(x, y, size) {
+      // Fake can: gray, no cross, different handle
       ctx.save();
-      const splashColor = "rgba(173,216,230," + (1 - progress) + ")";
-      const maxR = 25 + 10 * progress;
-      for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI * 2 / 6) * i;
-        const r = maxR * (0.7 + 0.3 * Math.random());
+      ctx.beginPath();
+      ctx.moveTo(x - size/2 + 8, y - size/2 + 10);
+      ctx.lineTo(x + size/2 - 8, y - size/2 + 10);
+      ctx.lineTo(x + size/2 - 8, y + size/2 - 10);
+      ctx.lineTo(x - size/2 + 8, y + size/2 - 10);
+      ctx.closePath();
+      ctx.fillStyle = OBSTACLE_COLOR;
+      ctx.shadowColor = "#bdbdbd88";
+      ctx.shadowBlur = 8;
+      ctx.fill();
+
+      // Handle (different shape)
+      ctx.beginPath();
+      ctx.arc(x - size/2 + 24, y - size/2 + 10, 8, 0, Math.PI, true);
+      ctx.strokeStyle = "#eeeeee";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawHoles() {
+      ctx.save();
+      ctx.globalAlpha = 0.13;
+      for (let h of holes) {
         ctx.beginPath();
-        ctx.ellipse(
-          x + Math.cos(angle) * r,
-          y + Math.sin(angle) * r * 0.7,
-          7 + 5 * progress,
-          3 + 2 * progress,
-          angle,
-          0,
-          Math.PI * 2
-        );
-        ctx.fillStyle = splashColor;
+        ctx.ellipse(h.x, h.y + 20, MOLE_SIZE/2, 18, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "#795548";
         ctx.fill();
       }
       ctx.restore();
     }
 
-    function drawDrop(drop) {
-      ctx.save();
-      if (drop.splash) {
-        drawSplash(ctx, drop.x, drop.y, drop.splashProgress);
-      } else {
-        let color = drop.isBad ? "#b0b0b0" : "#87cefa"; // gray for bad, light blue for good
-        drawTeardrop(ctx, drop.x, drop.y, drop.radius, color);
+    function drawGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawHoles();
+      // Draw moles (jerry cans)
+      for (let m of moles) {
+        drawJerryCan(m.x, m.y, MOLE_SIZE, MOLE_COLOR);
       }
-      ctx.restore();
+      // Draw obstacles
+      for (let o of obstacles) {
+        drawObstacle(o.x, o.y, OBSTACLE_SIZE);
+      }
     }
 
-    function updateGame() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drops.forEach(drop => {
-        if (drop.splash) {
-          drop.splashProgress += 0.08;
-        } else {
-          drop.y += drop.speed;
+    function showMessage(msg) {
+      messageEl.textContent = msg;
+      setTimeout(() => {
+        if (messageEl.textContent === msg) messageEl.textContent = '';
+      }, 900);
+    }
+
+    function showMilestone(msg) {
+      milestoneEl.textContent = msg;
+      setTimeout(() => {
+        if (milestoneEl.textContent === msg) milestoneEl.textContent = '';
+      }, 1800);
+    }
+
+    function spawnMole() {
+      if (!gameActive) return;
+      // Pick a random hole not occupied
+      let available = holes.filter(h => !moles.some(m => m.holeIdx === holes.indexOf(h)) && !obstacles.some(o => o.holeIdx === holes.indexOf(h)));
+      if (available.length === 0) return;
+      let idx = Math.floor(Math.random() * available.length);
+      let holeIdx = holes.indexOf(available[idx]);
+      let mole = {
+        x: holes[holeIdx].x,
+        y: holes[holeIdx].y,
+        holeIdx: holeIdx,
+        timeout: null
+      };
+      moles.push(mole);
+      mole.timeout = setTimeout(() => {
+        // Remove mole if not whacked
+        moles = moles.filter(m => m !== mole);
+      }, MOLE_APPEAR_TIME);
+    }
+
+    function spawnObstacle() {
+      if (!gameActive) return;
+      // 30% chance to spawn an obstacle
+      if (Math.random() > 0.3) return;
+      let available = holes.filter(h => !moles.some(m => m.holeIdx === holes.indexOf(h)) && !obstacles.some(o => o.holeIdx === holes.indexOf(h)));
+      if (available.length === 0) return;
+      let idx = Math.floor(Math.random() * available.length);
+      let holeIdx = holes.indexOf(available[idx]);
+      let obstacle = {
+        x: holes[holeIdx].x,
+        y: holes[holeIdx].y,
+        holeIdx: holeIdx,
+        timeout: null
+      };
+      obstacles.push(obstacle);
+      obstacle.timeout = setTimeout(() => {
+        obstacles = obstacles.filter(o => o !== obstacle);
+      }, OBSTACLE_APPEAR_TIME);
+    }
+
+    function checkMilestone() {
+      const milestones = [
+        { score: 5, msg: "Milestone: 5 cans! Great start!" },
+        { score: 10, msg: "Milestone: 10 cans! Keep going!" },
+        { score: 20, msg: "Milestone: 20 cans! Amazing!" },
+        { score: 30, msg: "Milestone: 30 cans! You're a hero!" }
+      ];
+      for (let m of milestones) {
+        if (score >= m.score && lastMilestone < m.score) {
+          showMilestone(m.msg);
+          lastMilestone = m.score;
         }
-        drawDrop(drop);
-      });
-      // Remove drops that are out of bounds or finished splashing
-      drops = drops.filter(drop => {
-        if (drop.splash) {
-          return drop.splashProgress < 1;
-        }
-        return drop.y < canvas.height;
-      });
+      }
     }
 
     canvas.addEventListener('click', e => {
+      if (!gameActive) return;
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      for (let i = drops.length - 1; i >= 0; i--) {
-        const d = drops[i];
-        if (d.splash) continue;
-        // Use teardrop hit area: check if inside a circle for simplicity
-        const dx = d.x - mouseX;
-        const dy = d.y - mouseY;
-        if (Math.sqrt(dx*dx + dy*dy) < d.radius) {
-          // Start splash animation
-          d.splash = true;
-          d.splashProgress = 0;
-          if (d.isBad) {
-            score -= 1;
-            messageEl.textContent = 'Oops! That was a pollutant!';
-          } else {
-            score += 1;
-            messageEl.textContent = 'Nice catch!';
-          }
+      // Check moles first
+      for (let i = moles.length - 1; i >= 0; i--) {
+        const m = moles[i];
+        const dx = m.x - mouseX;
+        const dy = m.y - mouseY;
+        if (Math.abs(dx) < MOLE_SIZE/2 && Math.abs(dy) < MOLE_SIZE/2) {
+          // Whacked!
+          clearTimeout(m.timeout);
+          moles.splice(i, 1);
+          score += 1;
           scoreEl.textContent = 'Score: ' + score;
-          break;
+          showMessage('Nice whack!');
+          checkMilestone();
+          return;
+        }
+      }
+      // Check obstacles
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        const dx = o.x - mouseX;
+        const dy = o.y - mouseY;
+        if (Math.abs(dx) < OBSTACLE_SIZE/2 && Math.abs(dy) < OBSTACLE_SIZE/2) {
+          // Hit obstacle: penalty
+          clearTimeout(o.timeout);
+          obstacles.splice(i, 1);
+          score = Math.max(0, score - 1);
+          scoreEl.textContent = 'Score: ' + score;
+          showMessage('Oops! Fake can!');
+          return;
         }
       }
     });
 
-    setInterval(spawnDrop, 800);
+    function gameLoop() {
+      drawGame();
+      if (gameActive) requestAnimationFrame(gameLoop);
+    }
+
+    // Fast-paced spawn
+    setInterval(spawnMole, MOLE_POPUP_INTERVAL);
+    setInterval(spawnObstacle, MOLE_POPUP_INTERVAL);
+
+    // Start game
     gameLoop();
   </script>
 </body>
