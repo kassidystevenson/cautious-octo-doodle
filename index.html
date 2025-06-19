@@ -30,6 +30,7 @@
         <span id="timer-value">45</span>s
       </div>
     </div>
+    <button id="start-btn" class="game-btn" style="margin-bottom: 18px;">Start</button>
     <div id="message"></div>
     <div class="milestone" id="milestone"></div>
     <canvas id="gameCanvas" width="400" height="600"></canvas>
@@ -52,6 +53,7 @@
     const finalScoreEl = document.getElementById('final-score');
     const restartBtn = document.getElementById('restart-btn');
     const resetBtn = document.getElementById('reset-btn');
+    const startBtn = document.getElementById('start-btn');
 
     // Game settings
     const MOLE_SIZE = 60;
@@ -71,10 +73,11 @@
     let gameActive = true;
 
     // Timer variables
-    let timeLeft = 45;
+    let timeLeft = 20;
     const timerValueEl = document.getElementById('timer-value');
     const timerEl = document.getElementById('timer');
     let timerInterval = null;
+    let gameStarted = false;
 
     // Predefined holes (positions)
     const holes = [
@@ -358,6 +361,7 @@
     function showGameOver() {
       finalScoreEl.textContent = `Final Score: ${score}`;
       gameOverModal.style.display = "flex";
+      startBtn.style.display = ""; // Show start button again for new game
     }
 
     function hideGameOver() {
@@ -370,28 +374,26 @@
       obstacles = [];
       pops = [];
       lastMilestone = 0;
-      timeLeft = 45;
+      timeLeft = 20;
       gameActive = true;
       scoreEl.textContent = 'Score: 0';
       messageEl.textContent = '';
       milestoneEl.textContent = '';
       updateTimerDisplay();
+      gameStarted = false;
+      startBtn.style.display = ""; // Show start button
     }
 
     function restartGame() {
       hideGameOver();
       resetGameVars();
-      gameLoop();
-      startTimer();
+      // Don't start timer or game loop yet, wait for Start button
     }
 
     function resetAll() {
       hideGameOver();
       resetGameVars();
-      // Optionally, you could reload the page for a full reset:
-      // location.reload();
-      gameLoop();
-      startTimer();
+      // Don't start timer or game loop yet, wait for Start button
     }
 
     restartBtn.onclick = restartGame;
@@ -422,12 +424,28 @@
     }
 
     // Fast-paced spawn
-    setInterval(spawnMole, MOLE_POPUP_INTERVAL);
-    setInterval(spawnObstacle, MOLE_POPUP_INTERVAL);
+    let moleInterval = null;
+    let obstacleInterval = null;
 
-    // Start game
-    gameLoop();
-    startTimer();
+    function startGame() {
+      if (gameStarted) return;
+      gameStarted = true;
+      startBtn.style.display = "none";
+      gameActive = true;
+      updateTimerDisplay();
+      gameLoop();
+      startTimer();
+      if (moleInterval) clearInterval(moleInterval);
+      if (obstacleInterval) clearInterval(obstacleInterval);
+      moleInterval = setInterval(spawnMole, MOLE_POPUP_INTERVAL);
+      obstacleInterval = setInterval(spawnObstacle, MOLE_POPUP_INTERVAL);
+    }
+
+    startBtn.onclick = startGame;
+
+    // On load, show only the start button, don't start game/timer/intervals
+    resetGameVars();
+    drawGame();
   </script>
 </body>
 </html>
